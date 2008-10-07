@@ -1,3 +1,28 @@
+h1. git remote-branch
+
+Usage: git remote-branch (create|destroy) [<branch>]
+
+Creates or destroys remote branches and their associated local tracking
+branches. This code is based on git-remote-branch by Carl Mercier
+(carl@carlmercier.com).
+
+Creating Branches
+
+With no arguments (git remote-branch create), adds a new remote branch with the
+commits in the current branch (presumably a local-only branch), and configures
+this branch to track the remote branch.
+
+With a <branch> specified, creates a remote branch, creates a local tracking
+branch, and switches to that branch.
+
+Deleting Branches
+
+With no arguments (git remote-branch delete), removes the current branch both
+locally and remotely.
+
+With a <branch> specified, removes the given branch from the remote repository
+then deletes the local tracking branch.
+
 h1. git pull-migrate
 
 *Usage:* @git pull-migrate [<branch>]@
