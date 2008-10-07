@@ -1,31 +1,31 @@
 h1. git remote-branch
 
-Usage: git remote-branch (create|destroy) [<branch>]
+*Usage:* @git remote-branch (create|destroy) [&lt;branch&gt;]@
 
 Creates or destroys remote branches and their associated local tracking
 branches. This code is based on git-remote-branch by Carl Mercier
 (carl@carlmercier.com).
 
-Creating Branches
+h2. Creating Branches
 
 With no arguments (git remote-branch create), adds a new remote branch with the
 commits in the current branch (presumably a local-only branch), and configures
 this branch to track the remote branch.
 
-With a <branch> specified, creates a remote branch, creates a local tracking
-branch, and switches to that branch.
+With a &lt;branch&gt; specified, creates a remote branch, creates a local
+tracking branch, and switches to that branch.
 
-Deleting Branches
+h2. Deleting Branches
 
 With no arguments (git remote-branch delete), removes the current branch both
 locally and remotely.
 
-With a <branch> specified, removes the given branch from the remote repository
-then deletes the local tracking branch.
+With a &lt;branch&gt; specified, removes the given branch from the remote
+repository then deletes the local tracking branch.
 
 h1. git pull-migrate
 
-*Usage:* @git pull-migrate [<branch>]@
+*Usage:* @git pull-migrate [&lt;branch&gt;]@
 
 *Note:* This command is intended for projects with sequential migrations, _not_
 timestamped migrations.
@@ -44,16 +44,16 @@ You will need to push the commit. This is useful if you have staged migrations
 that haven't been committed, and another developer commits migrations with the
 same numbers as yours.
 
-If you supply a <branch>, it will be used instead of the remote tracking branch.
-This is useful if you are working on a "feature branch" and you frequently merge
-the downstream changes of the parent branch (which would be the <branch>) into
-your branch. Should the parent branch have any migrations that yours does not,
-your migrations will be renumbered and room will be made for the parent
-migrations.
+If you supply a &lt;branch&gt;, it will be used instead of the remote tracking
+branch. This is useful if you are working on a "feature branch" and you
+frequently merge the downstream changes of the parent branch (which would be the
+&lt;branch&gt;) into your branch. Should the parent branch have any migrations
+that yours does not, your migrations will be renumbered and room will be made
+for the parent migrations.
 
 h1. git checkout-migrate
 
-*Usage:* @git checkout-migrate <branch>@
+*Usage:* @git checkout-migrate &lt;branch&gt;@
 
 *Note:* This command is intended for projects with sequential migrations, _not_
 timestamped migrations.
