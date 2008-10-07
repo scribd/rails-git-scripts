@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-# Usage: git checkout-migrate [branch]
+# Usage: git checkout-migrate <branch>
 #
 # This task checks out a branch, and migrates the database appropriately for
 # that branch. In order, it performs the following tasks:
@@ -13,10 +13,10 @@
 new_branch = ARGV.shift
 if new_branch == '-h' or new_branch.nil? or new_branch.strip.empty? then
   puts <<-EOF
-Usage: git checkout-migrate [branch]
+Usage: git checkout-migrate <branch>
 
-This task checks out a branch, and migrates the database appropriately for
-that branch. In order, it performs the following tasks:
+This task checks out a branch, and migrates the database appropriately for that
+branch. In order, it performs the following tasks:
 
 1. Migrates your database down to the highest common migration between the two
    branches,

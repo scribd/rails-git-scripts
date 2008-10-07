@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-# Usage: git pull-migrate [merge branch]
+# Usage: git pull-migrate [<branch>]
 # 
 # With no arguments, pulls in changes from the remote tracking branch. If there
 # are migration number conflicts, this tool
@@ -16,39 +16,39 @@
 # that haven't been committed, and another developer commits migrations with the
 # same numbers as yours.
 # 
-# If you supply a [merge branch], it will be used instead of the remote tracking
+# If you supply a <branch>, it will be used instead of the remote tracking
 # branch. This is useful if you are working on a "feature branch" and you
 # frequently merge the downstream changes of the parent branch (which would be
-# the [merge branch]) into your branch. Should the parent branch have any
-# migrations that yours does not, your migrations will be renumbered and room
-# will be made for the parent migrations.
+# the <branch>) into your branch. Should the parent branch have any migrations
+# that yours does not, your migrations will be renumbered and room will be made
+# for the parent migrations.
 
 
 merge_branch = ARGV.shift
 if merge_branch == '-h' then
   puts <<-EOF
-Usage: git pull-migrate [merge branch]
+Usage: git pull-migrate [<branch>]
 
 With no arguments, pulls in changes from the remote tracking branch. If there
 are migration number conflicts, this tool
 
- * migrates your database down past the lowest conflicting number (with the
+1. migrates your database down past the lowest conflicting number (with the
    option to backup your database),
- * renumbers your migrations to be above any new remote migrations,
- * commits this change,
- * pulls in the remote migrations,
- * and applies all migrations with the new numbering.
+2. renumbers your migrations to be above any new remote migrations,
+3. commits this change,
+4. pulls in the remote migrations,
+5. and applies all migrations with the new numbering.
 
 You will need to push the commit. This is useful if you have staged migrations
 that haven't been committed, and another developer commits migrations with the
 same numbers as yours.
 
-If you supply a [merge branch], it will be used instead of the remote tracking
-branch. This is useful if you are working on a "feature branch" and you
-frequently merge the downstream changes of the parent branch (which would be the
-[merge branch]) into your branch. Should the parent branch have any migrations
-that yours does not, your migrations will be renumbered and room will be made
-for the parent migrations.
+If you supply a <branch>, it will be used instead of the remote tracking branch.
+This is useful if you are working on a "feature branch" and you frequently merge
+the downstream changes of the parent branch (which would be the <branch>) into
+your branch. Should the parent branch have any migrations that yours does not,
+your migrations will be renumbered and room will be made for the parent
+migrations.
   EOF
   exit
 end
