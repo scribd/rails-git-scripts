@@ -1,0 +1,36 @@
+h1. git pull-migrate
+
+*Usage:* @git pull-migrate [merge branch]@
+
+With no arguments, pulls in changes from the remote tracking branch. If there
+are migration number conflicts, this tool
+
+# migrates your database down past the lowest conflicting number (with the
+  option to backup your database),
+# renumbers your migrations to be above any new remote migrations,
+# commits this change,
+# pulls in the remote migrations,
+# and applies all migrations with the new numbering.
+
+You will need to push the commit. This is useful if you have staged migrations
+that haven't been committed, and another developer commits migrations with the
+same numbers as yours.
+
+If you supply a [merge branch], it will be used instead of the remote tracking
+branch. This is useful if you are working on a "feature branch" and you
+frequently merge the downstream changes of the parent branch (which would be the
+[merge branch]) into your branch. Should the parent branch have any migrations
+that yours does not, your migrations will be renumbered and room will be made
+for the parent migrations.
+
+h1. git checkout-migrate
+
+*Usage:* @git checkout-migrate [branch]@
+
+This task checks out a branch, and migrates the database appropriately for that
+branch. In order, it performs the following tasks:
+
+# Migrates your database down to the highest common migration between the two
+  branches,
+# checks out the new branch, and
+# migrates the database back up to the highest migration.

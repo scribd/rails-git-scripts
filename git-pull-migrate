@@ -1,0 +1,217 @@
+#!/usr/bin/env ruby
+#
+# Usage: git pull-migrate [merge branch]
+# 
+# With no arguments, pulls in changes from the remote tracking branch. If there
+# are migration number conflicts, this tool
+# 
+# 1. migrates your database down past the lowest conflicting number (with the
+#   option to backup your database),
+# 2. renumbers your migrations to be above any new remote migrations,
+# 3. commits this change,
+# 4. pulls in the remote migrations,
+# 5. and applies all migrations with the new numbering.
+# 
+# You will need to push the commit. This is useful if you have staged migrations
+# that haven't been committed, and another developer commits migrations with the
+# same numbers as yours.
+# 
+# If you supply a [merge branch], it will be used instead of the remote tracking
+# branch. This is useful if you are working on a "feature branch" and you
+# frequently merge the downstream changes of the parent branch (which would be
+# the [merge branch]) into your branch. Should the parent branch have any
+# migrations that yours does not, your migrations will be renumbered and room
+# will be made for the parent migrations.
+
+
+merge_branch = ARGV.shift
+if merge_branch == '-h' then
+  puts <<-EOF
+Usage: git pull-migrate [merge branch]
+
+With no arguments, pulls in changes from the remote tracking branch. If there
+are migration number conflicts, this tool
+
+ * migrates your database down past the lowest conflicting number (with the
+   option to backup your database),
+ * renumbers your migrations to be above any new remote migrations,
+ * commits this change,
+ * pulls in the remote migrations,
+ * and applies all migrations with the new numbering.
+
+You will need to push the commit. This is useful if you have staged migrations
+that haven't been committed, and another developer commits migrations with the
+same numbers as yours.
+
+If you supply a [merge branch], it will be used instead of the remote tracking
+branch. This is useful if you are working on a "feature branch" and you
+frequently merge the downstream changes of the parent branch (which would be the
+[merge branch]) into your branch. Should the parent branch have any migrations
+that yours does not, your migrations will be renumbered and room will be made
+for the parent migrations.
+  EOF
+  exit
+end
+
+def format(str, attrs={})
+  attrstrs = []
+  attrstrs << case attrs[:style]
+    when :bright then 1
+    when :dim then 2
+    when :underscore then 4
+    when :blink then 5
+    when :reverse then 7
+    when :hidden then 8
+    else nil
+  end
+  
+  attrstrs << case attrs[:color]
+    when :black then 30
+    when :red then 31
+    when :green then 32
+    when :yellow then 33
+    when :blue then 34
+    when :magenta then 35
+    when :cyan then 36
+    when :white then 37
+    else nil
+  end
+  
+  attrstrs << case attrs[:bgcolor]
+    when :black then 40
+    when :red then 41
+    when :green then 42
+    when :yellow then 43
+    when :blue then 44
+    when :magenta then 45
+    when :cyan then 46
+    when :white then 47
+    else nil
+  end
+  "\033[#{attrstrs.compact.join ';'}m#{str}\033[00m"
+end
+
+def git_branch
+  branch_output = `git branch`
+  branch = nil
+  branch_output.each_line do |line|
+    matches = line.match(/^\*\s(.+)$/)
+    if matches then
+      branch = matches[1]
+      break
+    end
+  end
+  return branch
+end
+
+def working_directory_clean?
+  `git status`.include? 'nothing to commit (working directory clean)'
+end
+
+branch = git_branch
+remote = `git remote`.chomp.strip
+remote_branch = (merge_branch ? merge_branch : "#{remote}/#{branch}")
+
+################################################################################
+puts format(">> Checking #{remote_branch} for changes", :color => :green, :style => :bright)
+
+fetch_output = `git fetch`
+if fetch_output.chomp.strip.empty? then
+  puts "No changes to pull."
+  exit if merge_branch.nil?
+end
+
+unless branch
+  $stderr.puts "Couldn't figure out what branch I'm on!"
+  exit 1
+end
+
+system "git checkout #{remote_branch}"
+
+if git_branch == branch then
+  $stderr.puts "Couldn't switch to remote tracking branch!"
+  exit 1
+end
+
+remote_migrations = Dir.entries("db/migrate")
+
+system "git checkout #{branch}"
+
+local_migrations = Dir.entries("db/migrate")
+
+if local_migrations.sort == remote_migrations.sort then
+  puts "No migrations to run; merging remote tracking branch into local tracking branch..."
+  system "git merge #{remote}/#{branch}"
+  exit
+end
+
+common_migrations = remote_migrations & local_migrations
+remote_only_migrations = remote_migrations - common_migrations
+local_only_migrations = local_migrations - common_migrations
+
+################################################################################
+puts format(">> Migrating your database down", :color => :green, :style => :bright)
+
+last_common_migration = common_migrations.last.match(/^(\d+)_/)[1].to_i
+puts format("!! About to run 'rake db:migrate VERSION=#{last_common_migration}'; would you like to make a backup of your database first? [Y/n]", :color => :yellow)
+backup_answer = gets
+if backup_answer.strip.downcase[0] == ?n then
+  puts "   >> Skipping the backup."
+else
+  puts "   >> Backing up your database to db/backup_#{last_common_migration}.sql..."
+  system "mysqldump -u root collegelist_development > db/backup_#{last_common_migration}.sql"
+end
+
+system "rake db:migrate VERSION=#{last_common_migration}"
+
+################################################################################
+puts format(">> Renumbering your migrations", :color => :green, :style => :bright)
+
+unless working_directory_clean?
+  puts format("!! You have local changes; would you like to stash them before renumbering migrations? [Y/n]", :color => :yellow)
+  stash_answer = gets
+  wont_stash = stash_answer.strip.downcase[0] == ?n
+  unless wont_stash
+    puts "  >> Adding all local changes and stashing them"
+    system "git add ."
+    system "git stash"
+  end
+end
+
+highest_remote_migration = remote_migrations.last.match(/^(\d+)_/)[1].to_i
+next_migration = highest_remote_migration + 1
+local_only_migrations.each do |migration|
+  migration_name = migration.match(/^\d+_(.+)$/)[1]
+  system "git mv db/migrate/#{migration} db/migrate/#{next_migration}_#{migration_name}"
+  next_migration += 1
+end
+
+system "git status"
+puts format("!! Commit these changes? [Y/n]", :color => :yellow)
+commit_answer = gets
+if commit_answer.strip.downcase[0] == ?n then
+  puts "   >> Leaving the changes staged; you can commit them later."
+else
+  system 'git commit -m "Advanced migrations"'
+end
+
+################################################################################
+puts format(">> Merging in changes from #{remote_branch}", :color => :green, :style => :bright)
+
+merge_result = `git merge #{remote_branch}`
+if merge_result.include? 'CONFLICT' then
+  puts format("!! There were conflicts in the merge. Please 1) fix these conflicts, 2) commit the merge, 3) run `rake db:migrate`, and 4) push the changes.", :color => :yellow, :style => :bright)
+  exit
+end
+
+################################################################################
+puts format(">> Migrating your database up", :color => :green, :style => :bright)
+
+system "rake db:migrate"
+
+puts ""
+if wont_stash then
+  puts ">> All complete! Remember to commit the new migrations and push them + the merge"
+else
+  puts ">> All complete! Remember to push the new commit and the merge."
+end

@@ -1,0 +1,148 @@
+#!/usr/bin/env ruby
+#
+# Usage: git checkout-migrate [branch]
+#
+# This task checks out a branch, and migrates the database appropriately for
+# that branch. In order, it performs the following tasks:
+#
+# 1. Migrates your database down to the highest common migration between the two
+#    branches,
+# 2. checks out the new branch, and
+# 3. migrates the database back up to the highest migration.
+
+new_branch = ARGV.shift
+if new_branch == '-h' or new_branch.nil? or new_branch.strip.empty? then
+  puts <<-EOF
+Usage: git checkout-migrate [branch]
+
+This task checks out a branch, and migrates the database appropriately for
+that branch. In order, it performs the following tasks:
+
+1. Migrates your database down to the highest common migration between the two
+   branches,
+2. checks out the new branch, and
+3. migrates the database back up to the highest migration.
+  EOF
+  exit
+end
+
+def format(str, attrs={})
+  attrstrs = []
+  attrstrs << case attrs[:style]
+    when :bright then 1
+    when :dim then 2
+    when :underscore then 4
+    when :blink then 5
+    when :reverse then 7
+    when :hidden then 8
+    else nil
+  end
+  
+  attrstrs << case attrs[:color]
+    when :black then 30
+    when :red then 31
+    when :green then 32
+    when :yellow then 33
+    when :blue then 34
+    when :magenta then 35
+    when :cyan then 36
+    when :white then 37
+    else nil
+  end
+  
+  attrstrs << case attrs[:bgcolor]
+    when :black then 40
+    when :red then 41
+    when :green then 42
+    when :yellow then 43
+    when :blue then 44
+    when :magenta then 45
+    when :cyan then 46
+    when :white then 47
+    else nil
+  end
+  "\033[#{attrstrs.compact.join ';'}m#{str}\033[00m"
+end
+
+def git_branch
+  branch_output = `git branch`
+  branch = nil
+  branch_output.each_line do |line|
+    matches = line.match(/^\*\s(.+)$/)
+    if matches then
+      branch = matches[1]
+      break
+    end
+  end
+  return branch
+end
+
+class Array
+  def to_ranges
+    array = self.compact.uniq.sort
+    ranges = []
+    if not array.empty? then
+      # Initialize the left and right endpoints of the range
+      left, right = self.first, nil
+      array.each do |obj|
+        # If the right endpoint is set and obj is not equal to right's successor 
+        # then we need to create a range.
+        if right and obj != right.succ then
+          ranges << Range.new(left,right)
+          left = obj
+        end
+        right = obj
+      end
+      ranges << Range.new(left,right)
+    end
+    return ranges
+  end
+end
+
+old_branch = git_branch
+
+old_migrations = Dir.entries("db/migrate")
+
+################################################################################
+puts format(">> Checking #{new_branch}'s list of migrations...", :color => :green, :style => :bright)
+
+system "git checkout #{new_branch}"
+
+if git_branch != new_branch then
+  puts "Couldn't switch branches; aborting."
+  exit
+end
+
+new_migrations = Dir.entries("db/migrate")
+
+################################################################################
+puts format(">> Migrating your database down to the highest common migration...", :color => :green, :style => :bright)
+
+system "git checkout #{old_branch}"
+
+shared_migrations = (old_migrations & new_migrations).map { |file| file.match(/^(\d+)_/)[1].to_i rescue nil }.compact
+highest_shared_migration = shared_migrations.to_ranges.first.last
+
+puts format("!! About to run 'rake db:migrate VERSION=#{highest_shared_migration}'; would you like to make a backup of your database first? [Y/n]", :color => :yellow)
+backup_answer = gets
+if backup_answer.strip.downcase[0] == ?n then
+  puts "   >> Skipping the backup."
+else
+  puts "   >> Backing up your database to db/backup.#{old_branch}.#{highest_shared_migration}.sql..."
+  system "mysqldump -u root collegelist_development > db/backup.#{old_branch}.#{highest_shared_migration}.sql"
+end
+
+system "rake db:migrate VERSION=#{highest_shared_migration}"
+
+################################################################################
+puts format(">> Checking out #{new_branch}...", :color => :green, :style => :bright)
+
+system "git checkout #{new_branch}"
+
+################################################################################
+puts format(">> Migrating your database back up...", :color => :green, :style => :bright)
+
+system "rake db:migrate"
+
+################################################################################
+puts format(">> All complete.", :color => :green, :style => :bright)
