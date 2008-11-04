@@ -18,16 +18,12 @@ h2. git checkout-migrate
 
 *Usage:* @git checkout-migrate <branch>@
 
-*Note:* This command is intended for projects with sequential migrations, _not_
-timestamped migrations.
-
 This task checks out a branch, and migrates the database appropriately for that
 branch. In order, it performs the following tasks:
 
-# Migrates your database down to the highest common migration between the two
-  branches,
+# Migrates down any migrations unique to the current branch,
 # checks out the new branch, and
-# migrates the database back up to the highest migration.
+# migrates up any migrations unique to the new branch.
 
 h2. git remote-branch
 
