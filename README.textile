@@ -14,34 +14,6 @@ Each tool can then be run as if it were a normal git command.
 
 h1. Commands
 
-h2. git pull-migrate
-
-*Usage:* @git pull-migrate [<branch>]@
-
-*Note:* This command is intended for projects with sequential migrations, _not_
-timestamped migrations.
-
-With no arguments, pulls in changes from the remote tracking branch. If there
-are migration number conflicts, this tool
-
-# migrates your database down past the lowest conflicting number (with the
-  option to backup your database),
-# renumbers your migrations to be above any new remote migrations,
-# commits this change,
-# pulls in the remote migrations,
-# and applies all migrations with the new numbering.
-
-You will need to push the commit. This is useful if you have staged migrations
-that haven't been committed, and another developer commits migrations with the
-same numbers as yours.
-
-If you supply a &lt;branch&gt;, it will be used instead of the remote tracking
-branch. This is useful if you are working on a "feature branch" and you
-frequently merge the downstream changes of the parent branch (which would be the
-&lt;branch&gt;) into your branch. Should the parent branch have any migrations
-that yours does not, your migrations will be renumbered and room will be made
-for the parent migrations.
-
 h2. git checkout-migrate
 
 *Usage:* @git checkout-migrate <branch>@
