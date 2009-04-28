@@ -110,6 +110,9 @@ end
 
 unique_to_old.reverse.each { |num| system "rake db:migrate:down VERSION=#{num}" }
 
+puts format(">> Migrating down migrations unique to #{old_branch} on test...", :color => :green, :style => :bright)
+unique_to_old.reverse.each { |num| system "env RAILS_ENV=test rake db:migrate:down VERSION=#{num}" }
+
 ################################################################################
 puts format(">> Checking out #{new_branch}...", :color => :green, :style => :bright)
 
@@ -117,8 +120,10 @@ system "git checkout #{new_branch}"
 
 ################################################################################
 puts format(">> Migrating up migrations unique to #{new_branch}...", :color => :green, :style => :bright)
-
 system "rake db:migrate"
+
+puts format(">> Migrating up migrations unique to #{new_branch} on test...", :color => :green, :style => :bright)
+system "env RAILS_ENV=test rake db:migrate"
 
 ################################################################################
 puts format(">> All complete.", :color => :green, :style => :bright)
