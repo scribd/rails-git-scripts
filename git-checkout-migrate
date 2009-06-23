@@ -9,6 +9,13 @@
 # 2. checks out the new branch, and
 # 3. migrates up any migrations unique to the new branch.
 
+suffix = [ '5', '' ].detect do |suff|
+  not `which mysql#{suff}`.chomp.strip.empty?
+end
+unless suffix
+  raise "Couldn't figure out your MySQL binary."
+end
+
 new_branch = ARGV.shift
 if new_branch == '-h' or new_branch.nil? or new_branch.strip.empty? then
   puts <<-EOF
@@ -105,7 +112,7 @@ if backup_answer.strip.downcase[0] == ?n then
   puts "   >> Skipping the backup."
 else
   puts "   >> Backing up your database to db/backup.#{old_branch}.#{highest_shared_migration}.sql..."
-  system "mysqldump -u root collegelist_development > db/backup.#{old_branch}.#{highest_shared_migration}.sql"
+  system "mysqldump#{suffix} -u root collegelist_development > db/backup.#{old_branch}.#{highest_shared_migration}.sql"
 end
 
 unique_to_old.reverse.each { |num| system "rake db:migrate:down VERSION=#{num}" }
