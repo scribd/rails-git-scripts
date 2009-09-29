@@ -111,8 +111,8 @@ backup_answer = gets
 if backup_answer.strip.downcase[0] == ?n then
   puts "   >> Skipping the backup."
 else
-  puts "   >> Backing up your database to db/backup.#{old_branch}.#{highest_shared_migration}.sql..."
-  system "mysqldump#{suffix} -u root collegelist_development > db/backup.#{old_branch}.#{highest_shared_migration}.sql"
+  puts "   >> Backing up your database to db/backup.#{old_branch}.sql..."
+  system "mysqldump#{suffix} -u root collegelist_development > db/backup.#{old_branch}.sql"
 end
 
 unique_to_old.reverse.each { |num| system "rake db:migrate:down VERSION=#{num}" }
